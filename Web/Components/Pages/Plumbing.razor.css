@@ -1,0 +1,74 @@
+.intro {
+    max-width: 52rem;
+    margin-bottom: 1.5rem;
+    color: var(--tt-text-muted);
+}
+
+    .intro code {
+        color: var(--tt-title);
+    }
+
+.steps {
+    max-width: 52rem;
+    margin: 0 0 40vh;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+}
+
+.step {
+    counter-increment: step;
+    padding-left: 1rem;
+    border-left: 4px solid var(--tt-accent);
+}
+
+.step-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+}
+
+    .step-title::before {
+        content: counter(step) ". ";
+        color: var(--tt-accent);
+    }
+
+.step-text {
+    color: var(--tt-text-muted);
+    margin-bottom: 0.75rem;
+}
+
+.step-code {
+    margin: 0;
+    padding: 0.9rem 1rem;
+    background-color: var(--tt-surface);
+    border: 1px solid var(--tt-border);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    overflow-x: auto;
+    color: #d4d4d4;
+}
+
+    /* VS Code Dark+ token colours */
+    .step-code ::deep .kw      { color: #569cd6; }
+    .step-code ::deep .ctrl    { color: #c586c0; }
+    .step-code ::deep .type    { color: #4ec9b0; }
+    .step-code ::deep .method  { color: #dcdcaa; }
+    .step-code ::deep .prop,
+    .step-code ::deep .var     { color: #9cdcfe; }
+    .step-code ::deep .str     { color: #ce9178; }
+    .step-code ::deep .num     { color: #b5cea8; }
+    .step-code ::deep .comment { color: #6a9955; }
+
+    .step-code ::deep .result {
+        display: inline-block;
+        vertical-align: top;
+        margin-top: 0.5em;
+    }
+
+    .step-code ::deep code > .result:first-child {
+        margin-top: 0;
+    }

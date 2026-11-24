@@ -1,0 +1,131 @@
+@rendermode InteractiveServer
+@using System.Diagnostics
+@using Microsoft.Extensions.AI
+@inject IChatClient ChatClient
+@inject ModelSelection Selection
+@inject ModelPricing Pricing
+
+<div class="quick-demo">
+    <div class="prompt-row">
+        <textarea class="prompt" rows="3" placeholder="Ask the model something..."
+                  @bind="prompt" @bind:event="oninput" @onkeydown="OnPromptKeyDown" disabled="@busy"></textarea>
+        <button class="send" @onclick="SendAsync" disabled="@(!CanSend)">Send</button>
+    </div>
+
+    <div class="output @(error is not null ? "output-error" : null)">
+        @if (busy)
+        {
+            <span class="output-placeholder">Waiting for @Selection.Current...</span>
+        }
+        else if (error is not null)
+        {
+            @error
+        }
+        else if (output is not null)
+        {
+            @output
+        }
+        else
+        {
+            <span class="output-placeholder">The response will appear here.</span>
+        }
+    </div>
+
+    <details class="telemetry">
+        <summary>Telemetry</summary>
+        @if (summary is null)
+        {
+            <p class="telemetry-empty">Send a prompt to see what the pipeline recorded.</p>
+        }
+        else
+        {
+            <dl class="telemetry-summary">
+                <dt>Provider</dt><dd>@summary.Provider</dd>
+                <dt>Model</dt><dd>@(summary.Model ?? "-")</dd>
+                <dt>Duration</dt><dd>@Milliseconds(summary.Duration)</dd>
+                <dt>Input tokens</dt><dd>@(summary.InputTokens?.ToString() ?? "-")</dd>
+                <dt>Output tokens</dt><dd>@(summary.OutputTokens?.ToString() ?? "-")</dd>
+                <dt>Cost</dt><dd>@(summary.Cost is { } cost ? ModelPricing.Format(cost) : "-")</dd>
+                <dt>Finish reason</dt><dd>@(summary.FinishReason ?? "-")</dd>
+            </dl>
+
+            <h3 class="spans-title">Spans (@spans.Count)</h3>
+            @foreach (var span in spans)
+            {
+                <div class="span @(span.Status == ActivityStatusCode.Error ? "span-error" : null)">
+                    <div class="span-header">
+                        <code class="span-name">@span.Name</code>
+                        <span class="span-duration">@Milliseconds(span.Duration)</span>
+                    </div>
+                    @if (span.Tags.Count > 0)
+                    {
+                        <dl class="span-tags">
+                            @foreach (var tag in span.Tags)
+                            {
+                                <dt>@tag.Key</dt>
+                                <dd>@tag.Value</dd>
+                            }
+                        </dl>
+                    }
+                </div>
+            }
+        }
+    </details>
+</div>
+
+@code {
+    private sealed record Summary(
+        ModelProvider Provider, string? Model, TimeSpan Duration, long? InputTokens, long? OutputTokens, decimal? Cost,
+        string? FinishReason);
+
+    private string prompt = "";
+    private bool busy;
+    private string? output;
+    private string? error;
+    private Summary? summary;
+    private IReadOnlyList<CapturedSpan> spans = [];
+
+    private bool CanSend => !busy && !string.IsNullOrWhiteSpace(prompt);
+
+    /// <summary>Cmd+Enter (or Ctrl+Enter) sends, so the operator never has to leave the keyboard.</summary>
+    private Task OnPromptKeyDown(KeyboardEventArgs e) =>
+        e.Key == "Enter" && (e.MetaKey || e.CtrlKey) && CanSend ? SendAsync() : Task.CompletedTask;
+
+    private async Task SendAsync()
+    {
+        busy = true;
+        output = null;
+        error = null;
+
+        var provider = Selection.Current;
+        var stopwatch = Stopwatch.StartNew();
+        var capture = TelemetryCapture.Start("quick_demo");
+        ChatResponse? response = null;
+
+        try
+        {
+            response = await ChatClient.GetResponseAsync(prompt);
+            output = response.Text;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            stopwatch.Stop();
+            spans = capture.Stop();
+            summary = new Summary(
+                provider,
+                response?.ModelId,
+                stopwatch.Elapsed,
+                response?.Usage?.InputTokenCount,
+                response?.Usage?.OutputTokenCount,
+                Pricing.CostOf(provider, response?.Usage),
+                response?.FinishReason?.Value);
+            busy = false;
+        }
+    }
+
+    private static string Milliseconds(TimeSpan duration) => $"{duration.TotalMilliseconds:N0} ms";
+}

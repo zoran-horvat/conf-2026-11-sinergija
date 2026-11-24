@@ -1,0 +1,125 @@
+.demo {
+    max-width: 56rem;
+    padding-top: 2rem;
+    margin-bottom: 40vh;
+}
+
+.demo-title {
+    font-size: 3.2rem;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 2rem;
+}
+
+.demo-body {
+    display: flex;
+    align-items: flex-start;
+    gap: 2.5rem;
+}
+
+.planet {
+    margin: 0;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.planet-image {
+    width: 14rem;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid var(--tt-border);
+}
+
+.planet-credit {
+    width: 14rem;
+    font-size: 0.75rem;
+    color: var(--tt-text-muted);
+}
+
+.folds {
+    flex: 1;
+    border-top: 1px solid var(--tt-border);
+}
+
+.fold {
+    border-bottom: 1px solid var(--tt-border);
+}
+
+    .fold summary {
+        display: flex;
+        align-items: baseline;
+        gap: 0.75rem;
+        padding: 0.6rem 0.75rem;
+        cursor: pointer;
+        list-style: none;
+        border-radius: 4px;
+        font-size: 1.3rem;
+        font-weight: 600;
+    }
+
+        .fold summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .fold summary::before {
+            content: "▸";
+            color: var(--tt-accent);
+            transition: transform 0.15s ease;
+            display: inline-block;
+        }
+
+        .fold summary:hover {
+            background-color: rgba(61, 220, 132, 0.08);
+        }
+
+    .fold[open] summary {
+        color: var(--tt-title);
+    }
+
+        .fold[open] summary::before {
+            transform: rotate(90deg);
+        }
+
+.rules-list {
+    margin: 0;
+    padding: 0 0.75rem 1rem 2.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    color: var(--tt-text);
+}
+
+.rules-list li::marker {
+    color: var(--tt-accent);
+    font-weight: 600;
+}
+
+@media (max-width: 640px) {
+    .demo-body {
+        flex-direction: column;
+    }
+}
+
+.story {
+    padding: 0 0.75rem 1rem 2.1rem;
+    color: var(--tt-text);
+}
+
+    .story p {
+        margin-bottom: 0.75rem;
+    }
+
+        .story p:last-child {
+            margin-bottom: 0;
+        }
+
+.story-credit {
+    color: var(--tt-text-muted);
+    font-style: italic;
+}
+
+.stories {
+    margin-top: 2.5rem;
+}

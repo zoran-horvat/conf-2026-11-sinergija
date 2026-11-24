@@ -1,0 +1,20 @@
+.provider-switch {
+    display: flex;
+    gap: 1.5rem;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.provider-option {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    cursor: pointer;
+    color: var(--tt-text);
+}
+
+    .provider-option input {
+        accent-color: var(--tt-accent);
+        cursor: pointer;
+    }

@@ -1,0 +1,24 @@
+@rendermode InteractiveServer
+@implements IDisposable
+@inject ModelSelection Selection
+
+<fieldset class="provider-switch">
+    <legend class="visually-hidden">Model provider</legend>
+    @foreach (var provider in Enum.GetValues<ModelProvider>())
+    {
+        <label class="provider-option">
+            <input type="radio" name="model-provider"
+                   checked="@(Selection.Current == provider)"
+                   @onchange="() => Selection.Current = provider" />
+            @provider
+        </label>
+    }
+</fieldset>
+
+@code {
+    protected override void OnInitialized() => Selection.Changed += OnSelectionChanged;
+
+    private void OnSelectionChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Selection.Changed -= OnSelectionChanged;
+}

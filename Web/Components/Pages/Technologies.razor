@@ -1,0 +1,83 @@
+@page "/technologies"
+@using System.Reflection
+@using Microsoft.Extensions.AI
+@using Microsoft.Agents.AI
+
+<PageTitle>Mercury Outpost · Technologies</PageTitle>
+
+<h1>Technologies</h1>
+<div class="intro">
+    <p>
+        The application never talks to a language model's API directly.
+        It depends on a small set of abstractions, chiefly <code>IChatClient</code>,
+        and every model provider plugs in behind them through an adapter.
+    </p>
+    <p>
+        That keeps the vendor's SDK at the edge of the application.
+        Switching from Claude to a local model running in Ollama, or adding telemetry and caching around either of them,
+        is a change in one place at startup. The rest of the application, everything that sends a request to the model and reads its answer, does not change at all.
+    </p>
+</div>
+
+<div class="libraries">
+    @foreach (var library in libraries)
+    {
+        <details class="library">
+            <summary>
+                <span class="library-name">@library.Name</span>
+                <code class="library-version">@library.Version</code>
+            </summary>
+            <div class="library-role">
+                <p>@library.Role</p>
+                @if (library.KeyTypes.Length > 0)
+                {
+                    <p class="library-types">
+                        @foreach (var keyType in library.KeyTypes)
+                        {
+                            <code>@keyType</code>
+                        }
+                    </p>
+                }
+            </div>
+        </details>
+    }
+</div>
+
+@code {
+    private sealed record Library(string Name, string Version, string Role, params string[] KeyTypes);
+
+    private readonly Library[] libraries =
+    [
+        new(".NET", Environment.Version.ToString(),
+            "The platform. Since .NET 9, the abstractions for talking to language models ship as part of the .NET extension libraries, next to logging, configuration and dependency injection."),
+
+        new("Microsoft.Extensions.AI.Abstractions", VersionOf(typeof(IChatClient)),
+            "The seam. A handful of types that every model provider implements and every framework builds on. Semantic Kernel, AutoGen and Agent Framework all ended up depending on these same interfaces.",
+            "IChatClient", "ChatMessage", "ChatOptions", "AIFunction"),
+
+        new("Microsoft.Extensions.AI", VersionOf(typeof(ChatClientBuilder)),
+            "The pipeline around the seam. Middleware wraps any IChatClient with function invocation, structured output, telemetry, caching and logging, without the calling code knowing.",
+            "ChatClientBuilder", "UseFunctionInvocation", "UseOpenTelemetry", "GetResponseAsync<T>"),
+
+        new("Microsoft.Agents.AI", VersionOf(typeof(AIAgent)),
+            "Microsoft Agent Framework, the successor to Semantic Kernel and AutoGen. Agents, conversation threads, workflows and multi-agent orchestration, all built on top of IChatClient.",
+            "AIAgent", "ChatClientAgent"),
+
+        new("OpenTelemetry", VersionOf(typeof(OpenTelemetry.Sdk)),
+            "Visibility. Traces and metrics for every model call: tokens, latency, and how many calls one operation really took.",
+            "TracerProvider", "MeterProvider"),
+
+        new("Anthropic", VersionOf(typeof(Anthropic.AnthropicClient)),
+            "The connected model. The official Anthropic SDK for C#, with an adapter that exposes Claude as an ordinary IChatClient.",
+            "AnthropicClient", "AsIChatClient"),
+
+        new("OllamaSharp", VersionOf(typeof(OllamaSharp.OllamaApiClient)),
+            "The local model. A community client for Ollama that implements IChatClient directly. Microsoft retired its own Ollama package in its favour.",
+            "OllamaApiClient"),
+    ];
+
+    private static string VersionOf(Type type) =>
+        type.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]
+        ?? type.Assembly.GetName().Version?.ToString()
+        ?? "unknown";
+}

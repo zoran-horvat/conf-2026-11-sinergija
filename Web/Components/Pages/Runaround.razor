@@ -1,0 +1,327 @@
+@page "/runaround"
+@rendermode InteractiveServer
+@using MercuryOutpost.Web.AI
+@using MercuryOutpost.Web.Outpost
+@using Microsoft.Extensions.AI
+@using MercuryOutpost.Web.Outpost.Runaround
+@inject World World
+@inject Robot Robot
+@inject Human Human
+@inject ModelSelection Selection
+@inject ModelPricing Pricing
+
+<PageTitle>Mercury Outpost · Runaround</PageTitle>
+
+<h1>Runaround</h1>
+
+<section class="world">
+    <div class="section-header">
+        <h2 class="section-title">World</h2>
+        <button class="reset" title="Back to the start: positions, corrosion, and what the robot and the human remember"
+                @onclick="Reset" disabled="@(busy || robotBusy)">Reset</button>
+    </div>
+    <ul class="objects">
+        @foreach (var item in objects)
+        {
+            <li class="object">
+                <span class="object-name">
+                    <code class="object-id">@item.Id</code>
+                    @if (AgentFor(item.Id) is { } agent)
+                    {
+                        <button class="info" title="Show @agent.Name's instructions" @onclick="() => shown = agent">i</button>
+                    }
+                </span>
+                <span class="object-location">(@item.Location.X, @item.Location.Y)</span>
+                @if (item.CarriedBy is not null)
+                {
+                    <span class="object-carried">carried by @item.CarriedBy</span>
+                }
+            </li>
+        }
+    </ul>
+</section>
+
+<section class="order">
+    <h2 class="section-title">Human</h2>
+    <div class="order-row">
+        <input class="order-text" type="text" placeholder="Tell the human what to do..."
+               @bind="order" @bind:event="oninput" @onkeydown="OnOrderKeyDown" disabled="@busy" />
+        <button class="do" @onclick="DoAsync" disabled="@(!CanDo)">Do</button>
+    </div>
+
+    @if (busy)
+    {
+        <p class="reply reply-pending">The human is working on it...</p>
+    }
+    else if (error is not null)
+    {
+        <p class="reply reply-error">@error</p>
+    }
+    else if (reply is not null)
+    {
+        <div class="reply">
+            <span>@reply</span>
+            <span class="reply-status">@Tokens(replyUsage, replyCost)</span>
+        </div>
+    }
+
+    <div class="order-row robot-row">
+        <input class="order-text" type="text" placeholder="Human says..."
+               @bind="humanSays" @bind:event="oninput" @onkeydown="OnHumanSaysKeyDown" disabled="@robotBusy" />
+        <button class="run-robot" @onclick="RunRobotAsync" disabled="@robotBusy">Run robot</button>
+    </div>
+
+    @if (robotReplies.Count > 0 || robotBusy)
+    {
+        <ol class="robot-replies">
+            @foreach (var robotReply in robotReplies)
+            {
+                <li class="robot-reply @(robotReply.Failed ? "reply-error" : null)">
+                    <span class="robot-run">Run @robotReply.Run</span>
+                    <span class="robot-exchange">
+                        @if (robotReply.Said.Length > 0)
+                        {
+                            <span class="robot-said">Human: @robotReply.Said</span>
+                        }
+                        @if (robotReply.Text.Trim().Length > 0)
+                        {
+                            <span class="robot-text">@robotReply.Text</span>
+                        }
+                        else if (!robotReply.Failed)
+                        {
+                            <span class="robot-text robot-silent">(The robot said nothing.)</span>
+                        }
+                        @if (!robotReply.Failed)
+                        {
+                            <span class="robot-status @(robotReply.LimitHit ? "robot-status-limit" : null)">
+                                @robotReply.RoundTrips model round trips · @Tokens(robotReply.Usage, robotReply.Cost)
+                                @if (robotReply.LimitHit)
+                                {
+                                    <text> · stopped by the round-trip limit (@ChatClientRegistration.MaximumRoundTrips)</text>
+                                }
+                            </span>
+                        }
+                        @if (robotReply.Actions.Count > 0)
+                        {
+                            <details class="robot-actions">
+                                <summary>Actions (@robotReply.Actions.Count)</summary>
+                                <ol>
+                                    @foreach (var action in robotReply.Actions)
+                                    {
+                                        <li><code>@action</code></li>
+                                    }
+                                </ol>
+                            </details>
+                        }
+                    </span>
+                </li>
+            }
+            @if (robotBusy)
+            {
+                <li class="robot-reply reply-pending">
+                    <span class="robot-run">Run @(robotReplies.Count + 1)</span>
+                    <span class="robot-text">The robot is working on it...</span>
+                </li>
+            }
+        </ol>
+    }
+</section>
+
+@if (shown is not null)
+{
+    <div class="popup-backdrop" tabindex="-1" @ref="popupBackdrop"
+         @onclick="() => shown = null" @onkeydown="OnPopupKeyDown">
+        <div class="popup" @onclick:stopPropagation="true">
+            <div class="popup-header">
+                <h2 class="popup-title">Instructions: @shown.Name</h2>
+                <button class="popup-close" title="Close" @onclick="() => shown = null">×</button>
+            </div>
+            <pre class="popup-text">@shown.Instructions</pre>
+        </div>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<World.WorldObject> objects = [];
+    private string order = "";
+    private bool busy;
+    private string? reply;
+    private UsageDetails? replyUsage;
+    private decimal? replyCost;
+    private string? error;
+    private sealed record RobotReply(
+        int Run, string Said, string Text, bool Failed,
+        int RoundTrips = 0, bool LimitHit = false, IReadOnlyList<string>? ActionList = null, UsageDetails? Usage = null,
+        decimal? Cost = null)
+    {
+        public IReadOnlyList<string> Actions => ActionList ?? [];
+    }
+
+    private bool robotBusy;
+    private string humanSays = "";
+    private readonly List<RobotReply> robotReplies = [];
+
+    private OutpostAgent? shown;
+    private OutpostAgent? focused;
+    private ElementReference popupBackdrop;
+
+    /// <summary>Focuses a newly opened pop-up, so Esc reaches it without a click first.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (shown is not null && shown != focused)
+        {
+            focused = shown;
+            await popupBackdrop.FocusAsync();
+        }
+        else if (shown is null)
+        {
+            focused = null;
+        }
+    }
+
+    private void OnPopupKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") shown = null;
+    }
+
+    private bool CanDo => !busy && !string.IsNullOrWhiteSpace(order);
+
+    protected override void OnInitialized() => objects = World.Snapshot;
+
+    private OutpostAgent? AgentFor(string id) => id switch
+    {
+        RunaroundObjects.Robot => Robot,
+        RunaroundObjects.Human => Human,
+        _ => null,
+    };
+
+    private Task OnOrderKeyDown(KeyboardEventArgs e) =>
+        e.Key == "Enter" && CanDo ? DoAsync() : Task.CompletedTask;
+
+    private async Task DoAsync()
+    {
+        var sent = order;
+        order = "";
+        busy = true;
+        reply = null;
+        replyUsage = null;
+        replyCost = null;
+        error = null;
+        var provider = Selection.Current;
+
+        try
+        {
+            var response = await Human.RunAsync(sent);
+            reply = response.Text;
+            replyUsage = response.Usage;
+            replyCost = Pricing.CostOf(provider, response.Usage);
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            objects = World.Snapshot;
+            busy = false;
+        }
+    }
+
+    /// <summary>
+    /// Lets the robot take one turn, then shows its response and the world. Responses accumulate across clicks.
+    /// The human's controls stay usable meanwhile: both agents act on the same world at once.
+    /// </summary>
+    /// <summary>Starts the scenario over: the world back to its start, and both agents forget their conversations.</summary>
+    private void Reset()
+    {
+        World.Reset();
+        Robot.Forget();
+        Human.Forget();
+
+        objects = World.Snapshot;
+        robotReplies.Clear();
+        order = "";
+        humanSays = "";
+        reply = null;
+        replyUsage = null;
+        replyCost = null;
+        error = null;
+    }
+
+    /// <summary>
+    /// Input and output tokens of one response, added up over all its round trips to the model,
+    /// followed by what they cost, when the provider has a price.
+    /// </summary>
+    private static string Tokens(UsageDetails? usage, decimal? cost) =>
+        usage is null
+            ? "tokens not reported"
+            : $"in {usage.InputTokenCount?.ToString("N0") ?? "?"} / out {usage.OutputTokenCount?.ToString("N0") ?? "?"} tokens"
+              + (cost is { } amount ? $" · {ModelPricing.Format(amount)}" : "");
+
+    /// <summary>
+    /// Reads what the robot did during one run: every tool call with its result, how many times it went
+    /// to the model, and whether the round-trip limit cut it short. When the limit is reached, the
+    /// middleware makes one last request without tools, so the run ends quietly; only this tells.
+    /// </summary>
+    private static RobotReply Describe(int run, string said, IList<ChatMessage> messages, string text, UsageDetails? usage,
+        decimal? cost)
+    {
+        // Pair each call with the result that follows it. Walking in order also copes with providers
+        // that reuse call ids across rounds.
+        var pending = new Dictionary<string, FunctionCallContent>();
+        var actions = new List<string>();
+        foreach (var content in messages.SelectMany(message => message.Contents))
+        {
+            if (content is FunctionCallContent call)
+            {
+                pending[call.CallId] = call;
+            }
+            else if (content is FunctionResultContent result && pending.Remove(result.CallId, out var matched))
+            {
+                var arguments = string.Join(", ", (matched.Arguments ?? new Dictionary<string, object?>()).Values);
+                actions.Add($"{matched.Name}({arguments}) → {result.Result}");
+            }
+        }
+        actions.AddRange(pending.Values.Select(call => $"{call.Name}(…) → (no result)"));
+
+        var modelResponses = messages.Where(message => message.Role == ChatRole.Assistant).ToList();
+        var toolRounds = modelResponses.Count(message => message.Contents.OfType<FunctionCallContent>().Any());
+        var limitHit = toolRounds >= ChatClientRegistration.MaximumRoundTrips;
+
+        return new RobotReply(run, said, text, Failed: false, modelResponses.Count, limitHit, actions, usage, cost);
+    }
+
+    private Task OnHumanSaysKeyDown(KeyboardEventArgs e) =>
+        e.Key == "Enter" && !robotBusy ? RunRobotAsync() : Task.CompletedTask;
+
+    /// <summary>
+    /// The robot takes one turn. If the human said something, the robot receives it as the human speaking;
+    /// otherwise the turn brings nothing new and the robot simply continues.
+    /// </summary>
+    private async Task RunRobotAsync()
+    {
+        var said = humanSays.Trim();
+        humanSays = "";
+        robotBusy = true;
+        var run = robotReplies.Count + 1;
+        var provider = Selection.Current;
+
+        try
+        {
+            var response = said.Length > 0
+                ? await Robot.RunAsync($"The human says: {said}")
+                : await Robot.RunAsync();
+            robotReplies.Add(Describe(run, said, response.Messages, response.Text, response.Usage,
+                Pricing.CostOf(provider, response.Usage)));
+        }
+        catch (Exception ex)
+        {
+            robotReplies.Add(new RobotReply(run, said, ex.Message, Failed: true));
+        }
+        finally
+        {
+            objects = World.Snapshot;
+            robotBusy = false;
+        }
+    }
+}

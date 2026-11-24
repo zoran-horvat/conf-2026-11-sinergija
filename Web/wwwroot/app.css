@@ -1,0 +1,129 @@
+/* Deep green dark theme. Palette tokens first, then Bootstrap overrides. */
+:root, [data-bs-theme="dark"] {
+    --tt-bg: #07140d;            /* page background */
+    --tt-surface: #0d2117;       /* cards, tables */
+    --tt-surface-raised: #133024;
+    --tt-sidebar-top: #0a2a1b;
+    --tt-sidebar-bottom: #041009;
+    --tt-border: #1f4a35;
+    --tt-text: #d9eadf;          /* body text */
+    --tt-text-muted: #9dbfa9;
+    --tt-title: #55d683;         /* headings: bright, high contrast */
+    --tt-accent: #3ddc84;        /* links, active elements */
+    --tt-accent-strong: #1f9d57; /* button fill */
+    --tt-focus: rgba(61, 220, 132, 0.45);
+
+    --bs-body-bg: var(--tt-bg);
+    --bs-body-color: var(--tt-text);
+    --bs-secondary-color: var(--tt-text-muted);
+    --bs-emphasis-color: #f2fff6;
+    --bs-heading-color: var(--tt-title);
+    --bs-border-color: var(--tt-border);
+    --bs-link-color: var(--tt-accent);
+    --bs-link-color-rgb: 61, 220, 132;
+    --bs-link-hover-color: var(--tt-title);
+    --bs-link-hover-color-rgb: 85, 214, 131;
+    --bs-code-color: #a6f7c4;
+    --bs-tertiary-bg: var(--tt-surface);
+}
+
+/* Sized for a projector in a conference room: everything in rem scales from here. */
+html {
+    font-size: 20px;
+}
+
+html, body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: var(--tt-bg);
+    color: var(--tt-text);
+}
+
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+    color: var(--tt-title);
+    letter-spacing: 0.01em;
+}
+
+.lead {
+    color: var(--bs-emphasis-color);
+}
+
+.card {
+    --bs-card-bg: var(--tt-surface);
+    --bs-card-border-color: var(--tt-border);
+    --bs-card-color: var(--tt-text);
+}
+
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--tt-text);
+    --bs-table-border-color: var(--tt-border);
+}
+
+    .table th {
+        color: var(--tt-text-muted);
+        font-weight: 600;
+    }
+
+a, .btn-link {
+    color: var(--tt-accent);
+}
+
+.btn-primary {
+    --bs-btn-color: var(--tt-bg);
+    --bs-btn-bg: var(--tt-accent);
+    --bs-btn-border-color: var(--tt-accent);
+    --bs-btn-hover-color: var(--tt-bg);
+    --bs-btn-hover-bg: var(--tt-title);
+    --bs-btn-hover-border-color: var(--tt-title);
+    --bs-btn-active-color: var(--tt-bg);
+    --bs-btn-active-bg: var(--tt-accent-strong);
+    --bs-btn-active-border-color: var(--tt-accent-strong);
+    font-weight: 600;
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem var(--tt-bg), 0 0 0 0.25rem var(--tt-focus);
+}
+
+.content {
+    padding-top: 1.1rem;
+}
+
+h1:focus {
+    outline: none;
+}
+
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid #26b050;
+}
+
+.invalid {
+    outline: 1px solid #e50000;
+}
+
+.validation-message {
+    color: #e50000;
+}
+
+.blazor-error-boundary {
+    background: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNDkiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9IjIzNSIgeT0iNTEiIHdpZHRoPSI1NiIgaGVpZ2h0PSI0OSIvPjwvY2xpcFBhdGg+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMCkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMzUgLTUxKSI+PHBhdGggZD0iTTI2My41MDYgNTFDMjY0LjcxNyA1MSAyNjUuODEzIDUxLjQ4MzcgMjY2LjYwNiA1Mi4yNjU4TDI2Ny4wNTIgNTIuNzk4NyAyNjcuNTM5IDUzLjYyODMgMjkwLjE4NSA5Mi4xODMxIDI5MC41NDUgOTIuNzk1IDI5MC42NTYgOTIuOTk2QzI5MC44NzcgOTMuNTEzIDI5MSA5NC4wODE1IDI5MSA5NC42NzgyIDI5MSA5Ny4wNjUxIDI4OS4wMzggOTkgMjg2LjYxNyA5OUwyNDAuMzgzIDk5QzIzNy45NjMgOTkgMjM2IDk3LjA2NTEgMjM2IDk0LjY3ODIgMjM2IDk0LjM3OTkgMjM2LjAzMSA5NC4wODg2IDIzNi4wODkgOTMuODA3MkwyMzYuMzM4IDkzLjAxNjIgMjM2Ljg1OCA5Mi4xMzE0IDI1OS40NzMgNTMuNjI5NCAyNTkuOTYxIDUyLjc5ODUgMjYwLjQwNyA1Mi4yNjU4QzI2MS4yIDUxLjQ4MzcgMjYyLjI5NiA1MSAyNjMuNTA2IDUxWk0yNjMuNTg2IDY2LjAxODNDMjYwLjczNyA2Ni4wMTgzIDI1OS4zMTMgNjcuMTI0NSAyNTkuMzEzIDY5LjMzNyAyNTkuMzEzIDY5LjYxMDIgMjU5LjMzMiA2OS44NjA4IDI1OS4zNzEgNzAuMDg4N0wyNjEuNzk1IDg0LjAxNjEgMjY1LjM4IDg0LjAxNjEgMjY3LjgyMSA2OS43NDc1QzI2Ny44NiA2OS43MzA5IDI2Ny44NzkgNjkuNTg3NyAyNjcuODc5IDY5LjMxNzkgMjY3Ljg3OSA2Ny4xMTgyIDI2Ni40NDggNjYuMDE4MyAyNjMuNTg2IDY2LjAxODNaTTI2My41NzYgODYuMDU0N0MyNjEuMDQ5IDg2LjA1NDcgMjU5Ljc4NiA4Ny4zMDA1IDI1OS43ODYgODkuNzkyMSAyNTkuNzg2IDkyLjI4MzcgMjYxLjA0OSA5My41Mjk1IDI2My41NzYgOTMuNTI5NSAyNjYuMTE2IDkzLjUyOTUgMjY3LjM4NyA5Mi4yODM3IDI2Ny4zODcgODkuNzkyMSAyNjcuMzg3IDg3LjMwMDUgMjY2LjExNiA4Ni4wNTQ3IDI2My41NzYgODYuMDU0N1oiIGZpbGw9IiNGRkU1MDAiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvZz48L3N2Zz4=) no-repeat 1rem/1.8rem, #b32121;
+    padding: 1rem 1rem 1rem 3.7rem;
+    color: white;
+}
+
+    .blazor-error-boundary::after {
+        content: "An error has occurred."
+    }
+
+.darker-border-checkbox.form-check-input {
+    border-color: #929292;
+}
+
+.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
+    color: var(--bs-secondary-color);
+    text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
+    text-align: start;
+}

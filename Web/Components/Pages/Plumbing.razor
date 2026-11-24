@@ -1,0 +1,72 @@
+@page "/plumbing"
+
+<PageTitle>Mercury Outpost · Plumbing</PageTitle>
+
+<h1>Plumbing</h1>
+<div class="intro">
+    <p>
+        Connecting the application to a language model takes three steps, all of them at startup.
+        Get an <code>IChatClient</code> from the provider, wrap it in middleware, and register it with dependency injection.
+        Everything else in the application depends only on <code>IChatClient</code>.
+    </p>
+</div>
+
+<ol class="steps">
+    @foreach (var step in steps)
+    {
+        <li class="step">
+            <h2 class="step-title">@step.Title</h2>
+            <p class="step-text">@step.Text</p>
+            <pre class="step-code"><code>@CSharpHighlighter.Highlight(step.Code)</code></pre>
+        </li>
+    }
+    <li class="step">
+        <h2 class="step-title">Quick Demo</h2>
+        <p class="step-text">Ask the model selected in the top row. The page holds nothing but an injected IChatClient.</p>
+        <QuickDemo />
+    </li>
+</ol>
+
+@code {
+    private sealed record Step(string Title, string Text, string Code);
+
+    private readonly Step[] steps =
+    [
+        new("Get an IChatClient from the provider",
+            "Each provider's SDK either implements IChatClient directly or comes with an adapter. This is the only line that knows which vendor is behind the model.",
+            """
+            // Claude, through the official Anthropic SDK
+            string apiKey = config["Anthropic:ApiKey"];
+            string claudeModel = config["Anthropic:Model"];
+            AnthropicClient anthropic = new() { ApiKey = apiKey };
+            IChatClient claude = anthropic.AsIChatClient(claudeModel);
+
+            // A local model running in Ollama
+            Uri ollamaUrl = new(config["Ollama:Endpoint"]);
+            string ollamaModel = config["Ollama:Model"];
+            IChatClient local = new OllamaApiClient(ollamaUrl, ollamaModel);
+            """),
+
+        new("Wrap it in middleware",
+            "ChatClientBuilder stacks decorators around the client. Function invocation runs the tool-calling loop, and OpenTelemetry records every model call with its tokens and duration.",
+            """
+            IChatClient client = claude.AsBuilder()
+                .UseFunctionInvocation()
+                .UseOpenTelemetry(sourceName: "MercuryOutpost")
+                .Build();
+            """),
+
+        new("Register it and use it",
+            "AddChatClient puts the same pipeline into the service container. Components and services ask for IChatClient and never learn which model answers them.",
+            """
+            WebApplicationBuilder builder = ...;  // Program.cs
+
+            builder.Services.AddChatClient(claude)
+                .UseFunctionInvocation()
+                .UseOpenTelemetry(sourceName: "MercuryOutpost");
+
+            // Anywhere in the application
+            ChatResponse response = await chatClient.GetResponseAsync("Report the outpost status.");
+            """),
+    ];
+}

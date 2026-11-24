@@ -1,0 +1,82 @@
+.libraries {
+    max-width: 52rem;
+    margin-bottom: 40vh;
+    border-top: 1px solid var(--tt-border);
+}
+
+.library {
+    border-bottom: 1px solid var(--tt-border);
+}
+
+    .library summary {
+        display: flex;
+        align-items: baseline;
+        gap: 1rem;
+        padding: 0.6rem 0.75rem;
+        cursor: pointer;
+        list-style: none;
+        border-radius: 4px;
+    }
+
+        .library summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .library summary::before {
+            content: "▸";
+            color: var(--tt-accent);
+            transition: transform 0.15s ease;
+            display: inline-block;
+        }
+
+        .library summary:hover {
+            background-color: rgba(61, 220, 132, 0.08);
+        }
+
+    .library[open] summary::before {
+        transform: rotate(90deg);
+    }
+
+    .library[open] summary .library-name {
+        color: var(--tt-title);
+    }
+
+.library-name {
+    font-weight: 600;
+    flex: 1;
+}
+
+.library-version {
+    color: var(--tt-text-muted);
+}
+
+.library-role {
+    padding: 0 0.75rem 0.9rem 2.1rem;
+}
+
+    .library-role p {
+        margin-bottom: 0.5rem;
+    }
+
+.library-types {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+    .library-types code {
+        background-color: var(--tt-surface-raised);
+        border: 1px solid var(--tt-border);
+        border-radius: 4px;
+        padding: 0.1rem 0.45rem;
+    }
+
+.intro {
+    max-width: 52rem;
+    margin-bottom: 1.5rem;
+    color: var(--tt-text-muted);
+}
+
+    .intro code {
+        color: var(--tt-title);
+    }
